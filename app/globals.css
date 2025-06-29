@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+.text-sm-responsive {
+  @apply max-sm:text-sm min-md:text-base;
+}
+
+.text-md-responsive {
+  @apply max-sm:text-base min-md:text-lg;
+}
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
