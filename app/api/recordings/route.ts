@@ -2,7 +2,7 @@ import { usersData } from "@/app/lib/users";
 import { validateToken } from "../auth/helpers";
 import { recordingsData } from "@/app/lib/recordings";
 
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -16,26 +16,15 @@ export async function POST(req: Request) {
 
   try {
     const decoded = validateToken(token);
-    const user = usersData.find(user => user.email === decoded.email);
 
-    if (!user) {
-      return Response.json(
-        { success: false, message: "User not found" },
-        { status: 401 }
-      );
-    }
-
-    const audio = await req.json();
-
-    recordingsData.push({
-      id: Date.now().toString(),
-      userId: user.id,
-      ...audio,
-    });
+    const recordings = recordingsData.filter(
+      rec => rec.userId !== Number(decoded.id)
+    );
 
     return Response.json({
       success: true,
-      message: "Audio has been saved",
+      recordings: [decoded],
+      message: "Recordings fetched successfully",
     });
   } catch (err) {
     return Response.json(

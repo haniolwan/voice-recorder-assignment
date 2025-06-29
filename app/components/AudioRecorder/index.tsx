@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useRef, useState } from "react";
 
 const AudioRecorder = () => {
@@ -42,9 +43,7 @@ const AudioRecorder = () => {
 
     const localAudioChunks: Blob[] = [];
 
-    const token = localStorage.getItem("user_data");
-
-    const formData = new FormData();
+    const token = localStorage.getItem("token");
 
     mediaRecorder.current.ondataavailable = async event => {
       if (!event.data || event.data.size === 0) return;
@@ -52,15 +51,28 @@ const AudioRecorder = () => {
       localAudioChunks.push(event.data);
       setAudioChunks([...localAudioChunks]);
 
-      formData.append("audio", event.data);
-      formData.append("timestamp", new Date().toISOString());
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Audio = reader.result as string;
 
-      await fetch("/api/audio-chunk", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+        try {
+          await fetch("/api/audio-chunk", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              audio: base64Audio,
+              timestamp: new Date().toISOString(),
+            }),
+          });
+        } catch (error) {
+          console.error("Upload error:", error);
+        }
+      };
+
+      reader.readAsDataURL(event.data);
     };
   };
 

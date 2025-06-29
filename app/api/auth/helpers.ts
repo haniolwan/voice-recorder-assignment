@@ -1,9 +1,10 @@
+import { User } from "@/app/login/page";
 import bcrypt from "bcryptjs";
 
-export const generateToken = (email: string) => {
+export const generateToken = (user: User) => {
   return btoa(
     JSON.stringify({
-      email,
+      user,
       expireAt: Date.now() + 3600000,
     })
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import withAuth from "./components/AuthorizeUser/withAuth";
-import AudioRecorder from "./components/AudiRecorder";
+import AudioRecorder from "./components/AudioRecorder";
 import HomeLayout from "./components/HomeLayout";
 
 const Home = () => {

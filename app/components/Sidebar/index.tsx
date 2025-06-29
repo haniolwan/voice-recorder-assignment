@@ -1,3 +1,4 @@
+"use client";
 import { useUser } from "@/app/context/UserContext";
 import { useRouter } from "next/navigation";
 import { MouseEvent } from "react";

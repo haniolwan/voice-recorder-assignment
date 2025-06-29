@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
   return Response.json({
     success: true,
-    token: generateToken(email),
+    token: generateToken(newUser),
     user: { id: newUser.id, name: newUser.name, email: newUser.email },
   });
 }

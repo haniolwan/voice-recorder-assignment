@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     if (passwordMatch) {
       return Response.json({
         success: true,
-        token: generateToken(email),
+        token: generateToken(user),
         user: { id: user.id, name: user.name, email: user.email },
       });
     }

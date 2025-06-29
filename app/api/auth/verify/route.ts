@@ -14,10 +14,10 @@ export async function POST(req: Request) {
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = validateToken(token);
-    const user = usersData.find(user => user.email === decoded.email);
+    const { user } = validateToken(token);
+    const userFound = usersData.find(user => user.email === user.email);
 
-    if (!user) {
+    if (!userFound) {
       return Response.json(
         { success: false, message: "User not found" },
         { status: 401 }
