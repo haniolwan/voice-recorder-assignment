@@ -10,23 +10,12 @@ export type Record = {
   createdAt: string;
 };
 
-export const recordingsData: Record[] = [
-  {
-    id: "1",
-    title: "Recording 1",
-    userId: 1,
-    audioData: new ArrayBuffer(8),
-    duration: 8000,
-    type: "audio/webm",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    title: "Recording 2",
-    userId: 2,
-    audioData: new ArrayBuffer(8),
-    duration: 8000,
-    type: "audio/webm",
-    createdAt: new Date().toISOString(),
-  },
-];
+declare global {
+  var recordingsData: Record[] | undefined;
+}
+
+if (!globalThis.recordingsData) {
+  globalThis.recordingsData = [];
+}
+
+export const recordingsData = globalThis.recordingsData;

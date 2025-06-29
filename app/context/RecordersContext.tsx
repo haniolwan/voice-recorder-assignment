@@ -7,19 +7,20 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { Record } from "../lib/recordings";
 
 type RecordsContextType = {
-  recordings: any;
+  recordings: Record[];
   loading: boolean;
   error: string | null;
   fetchRecordings: () => Promise<void>;
-  setRecordings: (recording: any) => void;
+  setRecordings: (recording: Record[]) => void;
 };
 
 const RecordsContext = createContext<RecordsContextType | undefined>(undefined);
 
 export function RecordsProvider({ children }: { children: ReactNode }) {
-  const [recordings, setRecordings] = useState<any>([]);
+  const [recordings, setRecordings] = useState<Record[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

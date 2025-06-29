@@ -1,5 +1,6 @@
 "use client";
 import { useRecords } from "@/app/context/RecordersContext";
+import { Record } from "@/app/lib/recordings";
 import { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
@@ -8,7 +9,9 @@ const AudioRecorder = () => {
   const [stream, setStream] = useState<MediaStream>();
   const [recordingStatus, setRecordingStatus] = useState("inactive");
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
-  const [audio, setAudio] = useState<string>();
+  const [audio, setAudio] = useState<string[]>([]);
+  const [audioId, setAudioId] = useState<string>();
+  const mimeType = "audio/webm";
 
   const getMicrophonePermission = async () => {
     if ("MediaRecorder" in window) {
@@ -17,6 +20,7 @@ const AudioRecorder = () => {
           audio: true,
           video: false,
         });
+
         setPermission(true);
         setStream(streamData);
       } catch (error: any) {
@@ -26,12 +30,6 @@ const AudioRecorder = () => {
       alert("The MediaRecorder API is not supported in your browser.");
     }
   };
-
-  const mimeType = "audio/webm";
-
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
-
-  const { setRecordings } = useRecords();
 
   const startRecording = async () => {
     if (!stream) {
@@ -47,10 +45,8 @@ const AudioRecorder = () => {
 
     const localAudioChunks: Blob[] = [];
 
-    const token = localStorage.getItem("token");
-    const user = JSON.parse(localStorage.getItem("user") ?? "");
-
     const uuid = uuidv4();
+    setAudioId(uuid);
 
     mediaRecorder.current.ondataavailable = async event => {
       if (!event.data || event.data.size === 0) return;
@@ -62,7 +58,7 @@ const AudioRecorder = () => {
       reader.onloadend = async () => {
         const base64Audio = reader.result as string;
 
-        const response = await fetch("/api/audio-chunk", {
+        await fetch("/api/audio-chunk", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -77,45 +73,37 @@ const AudioRecorder = () => {
 
       reader.readAsDataURL(event.data);
     };
-
-    setRecordings((prev: any) => {
-      const existingIndex = prev.findIndex((rc: any) => rc.id === uuid);
-
-      if (existingIndex === -1) {
-        const newRecord = {
-          id: uuid,
-          userId: user.id,
-          audioData: [audio],
-          title: "Untitled",
-          duration: 0,
-          type: "audio",
-          createdAt: new Date().toISOString(),
-        };
-        return [...prev, newRecord];
-      } else {
-        const updated = [...prev];
-        const recordToUpdate = { ...updated[existingIndex] };
-
-        if (!Array.isArray(recordToUpdate.audioData)) {
-          recordToUpdate.audioData = [];
-        }
-
-        recordToUpdate.audioData = [...recordToUpdate.audioData, audio];
-        updated[existingIndex] = recordToUpdate;
-
-        return updated;
-      }
-    });
   };
+
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+
+  const { recordings, setRecordings } = useRecords();
+  const token = localStorage.getItem("token");
 
   const stopRecording = () => {
     if (mediaRecorder && mediaRecorder.current) {
       setRecordingStatus("inactive");
       mediaRecorder.current.stop();
-      mediaRecorder.current.onstop = () => {
+      mediaRecorder.current.onstop = async () => {
+        const response = await fetch("/api/save-final-recording", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ uniqueId: audioId }),
+        });
+
+        const { success, newRecording } = await response.json();
+
+        if (success) {
+          setRecordings((prev: Record[]) => [
+            ...prev,
+            { ...newRecording, audioData: audioChunks },
+          ]);
+        }
         const audioBlob = new Blob(audioChunks, { type: mimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
-        setAudio(audioUrl);
+        setAudio(prev => [...(prev || []), audioUrl]);
         setAudioChunks([]);
       };
     }
@@ -140,10 +128,10 @@ const AudioRecorder = () => {
   return (
     <div>
       <main>
-        <div className="audio-controls">
+        <div className="relative">
           {!permission ? (
             <button
-              className="flex items-center justify-center font-semibold w-full h-[44px] px-[18px] py-[10px] gap-2 rounded-lg mb-6 text-white bg-gray-700 hover:bg-gray-800 focus:bg-gray-800"
+              className="flex items-center justify-center font-semibold w-full h-[44px] px-[18px] py-[10px] gap-2 rounded-sm mb-6 text-white bg-gray-700 hover:bg-gray-800 focus:bg-gray-800"
               onClick={getMicrophonePermission}
               type="button"
             >
@@ -152,7 +140,7 @@ const AudioRecorder = () => {
           ) : null}
           {permission && recordingStatus === "inactive" ? (
             <button
-              className="flex items-center justify-center font-semibold w-full h-[44px] px-[18px] py-[10px] gap-2 rounded-lg mb-6 text-white bg-gray-700 hover:bg-gray-800 focus:bg-gray-800"
+              className="flex items-center justify-center font-semibold w-full h-[44px] px-[18px] py-[10px] gap-2 rounded-sm mb-6 text-white bg-gray-700 hover:bg-gray-800 focus:bg-gray-800"
               onClick={startRecording}
               type="button"
             >
@@ -160,20 +148,22 @@ const AudioRecorder = () => {
             </button>
           ) : null}
           {recordingStatus === "recording" ? (
-            <button
-              className="flex items-center justify-center font-semibold w-full h-[44px] px-[18px] py-[10px] gap-2 rounded-lg mb-6 text-white bg-gray-700 hover:bg-gray-800 focus:bg-gray-800"
-              onClick={stopRecording}
-              type="button"
-            >
-              Stop Recording
-            </button>
+            <div className="flex items-center space-x-4">
+              <button
+                className="flex items-center justify-center font-semibold w-full h-[44px] px-[18px] py-[10px] gap-2 rounded-sm mb-6 text-white bg-gray-700 hover:bg-gray-800 focus:bg-gray-800"
+                onClick={stopRecording}
+                type="button"
+              >
+                Stop Recording
+              </button>
+              <span className="text-gray-900 font-bold"></span>
+            </div>
           ) : null}
         </div>
-        {audio ? (
-          <div>
-            <audio src={audio} controls></audio>
-          </div>
-        ) : null}
+        <div className="space-y-4">
+          {audio &&
+            audio.map(src => <audio key={src} src={src} controls></audio>)}
+        </div>
       </main>
     </div>
   );

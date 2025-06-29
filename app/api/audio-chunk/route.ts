@@ -18,7 +18,9 @@ export async function POST(req: Request) {
 
     const { audio, uniqueId } = await req.json();
 
-    let NewRecord = recordingsData.find(rc => rc.id === uniqueId);
+    let NewRecord = recordingsData.find(
+      rc => (rc.id === uniqueId && rc.userId) === user.id
+    );
 
     if (!NewRecord) {
       NewRecord = {

@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
-import { recordingsData } from "@/app/lib/recordings";
 
-export async function GET(
+export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -17,12 +16,9 @@ export async function GET(
     );
   }
 
-  const token = authHeader.split(" ")[1];
-
+  const record = recordingsData?.find(rc => rc.id === params.id);
   try {
-    const recording = recordingsData.find(rc => rc.id === params.id);
-
-    if (!recording) {
+    if (!record) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -32,7 +28,7 @@ export async function GET(
       );
     }
 
-    if (!Array.isArray(recording.audioData)) {
+    if (!Array.isArray(record.audioData)) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -42,7 +38,7 @@ export async function GET(
       );
     }
 
-    const audioBuffers = recording.audioData.map((base64Str: string) => {
+    const audioBuffers = record.audioData.map((base64Str: string) => {
       const base64 = base64Str.split(",")[1];
       return Buffer.from(base64, "base64");
     });
@@ -53,7 +49,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "audio/webm",
-        "Content-Disposition": `inline; filename="${recording.id}.webm"`,
+        "Content-Disposition": `inline; filename="${record.id}.webm"`,
         "Content-Length": combinedAudio.length.toString(),
       },
     });
