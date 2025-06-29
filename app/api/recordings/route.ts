@@ -1,4 +1,3 @@
-import { usersData } from "@/app/lib/users";
 import { validateToken } from "../auth/helpers";
 import { recordingsData } from "@/app/lib/recordings";
 
@@ -15,15 +14,15 @@ export async function GET(req: Request) {
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = validateToken(token);
+    const { user } = validateToken(token);
 
     const recordings = recordingsData.filter(
-      rec => rec.userId !== Number(decoded.id)
+      rec => Number(rec.userId) === Number(user.id)
     );
 
     return Response.json({
       success: true,
-      recordings: [decoded],
+      recordings,
       message: "Recordings fetched successfully",
     });
   } catch (err) {

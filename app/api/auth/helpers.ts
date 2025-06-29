@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 export const generateToken = (user: User) => {
   return btoa(
     JSON.stringify({
-      user,
+      user: { id: user.id, name: user.name, email: user.email },
       expireAt: Date.now() + 3600000,
     })
   );
