@@ -6,6 +6,7 @@ import AuthLayout from "../components/AuthLayout";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { loginUserApiHandler } from "./utils/loginUserApiHandler";
 import { useRouter } from "next/navigation";
+import Button from "../components/Button";
 
 export type User = {
   id?: string | number;
@@ -122,18 +123,11 @@ const Login = () => {
               ariaLabel="Password"
             />
           </div>
-          <Link
-            href="/forgot-password"
-            className="text-primary-purple-700 text-sm font-semibold mb-6 block"
-          >
-            Forgot Password?
-          </Link>
-          <button
-            className="flex items-center justify-center font-semibold w-full h-[44px] px-[18px] py-[10px] gap-2 rounded-lg mb-6 text-white bg-gray-700 hover:bg-gray-800 focus:bg-gray-800"
+          <Button
             type="submit"
-          >
-            {loadingSubmit ? <LoadingSpinner /> : "Sign in"}
-          </button>
+            label={loadingSubmit ? <LoadingSpinner /> : "Sign in"}
+          />
+
           <div className="flex text-sm justify-center">
             <p className="text-sm text-gray-600 mr-1 font-medium">
               Don't have an account?

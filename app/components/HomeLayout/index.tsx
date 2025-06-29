@@ -1,5 +1,7 @@
+"use client";
 import { ReactNode } from "react";
 import Sidebar from "../Sidebar";
+import withAuth from "../AuthorizeUser/withAuth";
 
 type Props = {
   children: ReactNode;
@@ -15,4 +17,4 @@ const HomeLayout = ({ children }: Props) => {
   );
 };
 
-export default HomeLayout;
+export default withAuth(HomeLayout);
