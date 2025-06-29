@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 
 const AudioRecorder = () => {
   const [permission, setPermission] = useState<boolean>(false);
@@ -44,6 +45,7 @@ const AudioRecorder = () => {
     const localAudioChunks: Blob[] = [];
 
     const token = localStorage.getItem("token");
+    const uuid = uuidv4();
 
     mediaRecorder.current.ondataavailable = async event => {
       if (!event.data || event.data.size === 0) return;
@@ -55,21 +57,17 @@ const AudioRecorder = () => {
       reader.onloadend = async () => {
         const base64Audio = reader.result as string;
 
-        try {
-          await fetch("/api/audio-chunk", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              audio: base64Audio,
-              timestamp: new Date().toISOString(),
-            }),
-          });
-        } catch (error) {
-          console.error("Upload error:", error);
-        }
+        await fetch("/api/audio-chunk", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            audio: base64Audio,
+            uniqueId: uuid,
+          }),
+        });
       };
 
       reader.readAsDataURL(event.data);

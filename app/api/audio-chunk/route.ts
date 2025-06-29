@@ -15,29 +15,35 @@ export async function POST(req: Request) {
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = validateToken(token);
-    const user = usersData.find(user => user.email === decoded.email);
+    const { user } = validateToken(token);
 
-    if (!user) {
-      return Response.json(
-        { success: false, message: "User not found" },
-        { status: 401 }
-      );
+    const { audio, uniqueId } = await req.json();
+
+    let NewRecord = recordingsData.find(rc => rc.id === uniqueId);
+
+    if (!NewRecord) {
+      NewRecord = {
+        id: uniqueId,
+        userId: user.id,
+        audioData: [audio],
+        title: "Untitled",
+        duration: 0,
+        type: "audio",
+        createdAt: new Date().toISOString(),
+      };
+      recordingsData.push(NewRecord);
+    } else {
+      if (!Array.isArray(NewRecord.audioData)) {
+        NewRecord.audioData = [];
+      }
+      NewRecord.audioData.push(audio);
     }
-
-    const audio = await req.json();
-
-    recordingsData.push({
-      id: Date.now().toString(),
-      userId: user.id,
-      ...audio,
-    });
 
     return Response.json({
       success: true,
       message: "Audio has been saved",
     });
-  } catch (err) {
+  } catch (err: any) {
     return Response.json(
       { success: false, message: "Invalid or expired token" },
       { status: 401 }
