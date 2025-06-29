@@ -4,7 +4,8 @@ import { useState } from "react";
 import Input from "../components/Input";
 import AuthLayout from "../components/AuthLayout";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { loginUserApi } from "./utils/loginApi";
+import { registerUserApiHandler } from "./utils/registerUserApiHandler";
+import { useRouter } from "next/navigation";
 
 export type NewUser = {
   name: string;
@@ -19,11 +20,13 @@ export const emptyUser: NewUser = {
 };
 
 const Register = () => {
+  type Errors = { [key in keyof typeof newUser]?: string };
+
   const [newUser, setNewUser] = useState<NewUser>(emptyUser);
   const [errors, setErrors] = useState<Errors>({});
   const [loadingSubmit, setLoadingSubmit] = useState<boolean>(false);
 
-  type Errors = { [key in keyof typeof newUser]?: string };
+  const router = useRouter();
 
   const handleInputChange = (
     field: keyof typeof newUser,
@@ -54,29 +57,36 @@ const Register = () => {
 
     const { name: newName, email: newEmail, password: newPassword } = newUser;
 
-    if (!newName.trim()) {
-      newErrors.name = "Enter name";
-    }
+    if (!newName.trim()) newErrors.name = "Enter name";
 
-    if (!newEmail.trim()) {
-      newErrors.email = "Enter a valid email";
-    }
+    if (!newEmail.trim()) newErrors.email = "Enter a valid email";
 
-    if (!newPassword) {
-      newErrors.password = "Enter a valid password";
-    }
+    if (!newPassword) newErrors.password = "Enter a valid password";
 
     setErrors(prevErrs => ({ ...prevErrs, ...newErrors }));
 
-    if (Object.keys(newErrors).length > 0) {
-      return;
-    }
+    if (Object.keys(newErrors).length > 0) return;
 
     setLoadingSubmit(true);
 
-    loginUserApi(newUser);
+    const response = await registerUserApiHandler(
+      newName,
+      newEmail,
+      newPassword
+    );
+    if (response.success) {
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+
+      router.push("/");
+      onCloseEmptyStates();
+    } else {
+      setErrors(prev => ({
+        ...prev,
+        email: response.message || "Registration failed",
+      }));
+    }
     setLoadingSubmit(false);
-    onCloseEmptyStates();
   };
 
   return (
@@ -93,14 +103,11 @@ const Register = () => {
             <Input
               id="name"
               value={newUser.name}
-              handleInputChange={e =>
-                handleInputChange("email", e.target.value.replace(/\s/g, ""))
-              }
-              error={errors.email}
-              placeholder="Enter email address"
-              type="email"
-              autoComplete="off"
-              ariaLabel="Email address"
+              handleInputChange={e => handleInputChange("name", e.target.value)}
+              error={errors.name}
+              placeholder="Enter name"
+              type="text"
+              ariaLabel="Fullname"
             />
           </div>
           <div className="mt-4 min-md:mt-5">
@@ -111,7 +118,7 @@ const Register = () => {
               id="email"
               value={newUser.email}
               handleInputChange={e =>
-                handleInputChange("email", e.target.value.replace(/\s/g, ""))
+                handleInputChange("email", e.target.value)
               }
               error={errors.email}
               placeholder="Enter email address"
@@ -128,7 +135,7 @@ const Register = () => {
               id="password"
               value={newUser.password}
               handleInputChange={e =>
-                handleInputChange("password", e.target.value.replace(/\s/g, ""))
+                handleInputChange("password", e.target.value)
               }
               error={errors.password}
               placeholder="Enter password"

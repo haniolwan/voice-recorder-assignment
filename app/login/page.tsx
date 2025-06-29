@@ -4,7 +4,8 @@ import { useState } from "react";
 import Input from "../components/Input";
 import AuthLayout from "../components/AuthLayout";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { loginUserApi } from "./utils/loginApi";
+import { loginUserApiHandler } from "./utils/loginUserApiHandler";
+import { useRouter } from "next/navigation";
 
 export type User = {
   id?: string | number;
@@ -43,6 +44,8 @@ const Login = () => {
     setLoadingSubmit(false);
   };
 
+  const router = useRouter();
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -53,25 +56,34 @@ const Login = () => {
 
     const { email: newEmail, password: newPassword } = newUser;
 
-    if (!newEmail.trim()) {
-      newErrors.email = "Enter a valid email";
-    }
+    if (!newEmail.trim()) newErrors.email = "Enter a valid email";
 
-    if (!newPassword) {
-      newErrors.password = "Enter a valid password";
-    }
+    if (!newPassword) newErrors.password = "Enter a valid password";
 
     setErrors(prevErrs => ({ ...prevErrs, ...newErrors }));
 
-    if (Object.keys(newErrors).length > 0) {
-      return;
-    }
+    if (Object.keys(newErrors).length > 0) return;
 
     setLoadingSubmit(true);
-
-    loginUserApi(newUser);
+    const response = await loginUserApiHandler(newEmail, newPassword);
+    if (response.success) {
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          user: response.user,
+          token: response.token,
+        })
+      );
+      localStorage.setItem("token", response.token);
+      router.push("/");
+      onCloseEmptyStates();
+    } else {
+      setErrors(prev => ({
+        ...prev,
+        email: response.message || "Registration failed",
+      }));
+    }
     setLoadingSubmit(false);
-    onCloseEmptyStates();
   };
 
   return (
@@ -89,7 +101,7 @@ const Login = () => {
               id="email"
               value={newUser.email}
               handleInputChange={e =>
-                handleInputChange("email", e.target.value.replace(/\s/g, ""))
+                handleInputChange("email", e.target.value)
               }
               error={errors.email}
               placeholder="Enter email address"
@@ -106,7 +118,7 @@ const Login = () => {
               id="password"
               value={newUser.password}
               handleInputChange={e =>
-                handleInputChange("password", e.target.value.replace(/\s/g, ""))
+                handleInputChange("password", e.target.value)
               }
               error={errors.password}
               placeholder="Enter password"
