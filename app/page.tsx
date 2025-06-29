@@ -1,27 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import withAuth from "./components/AuthorizeUser/withAuth";
+import AudioRecorder from "./components/AudiRecorder";
+import HomeLayout from "./components/HomeLayout";
 
 const Home = () => {
-  const router = useRouter();
-
-  const handleLogoutUser = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/login");
-  };
-
   return (
-    <div>
-      <button
-        onClick={handleLogoutUser}
-        className="flex items-center justify-center font-semibold w-20 h-[44px] px-[18px] py-[10px] gap-2 rounded-lg mb-6 text-white bg-red-400 hover:bg-red-600 focus:bg-gray-800"
-        type="submit"
-      >
-        Logout
-      </button>
-    </div>
+    <HomeLayout>
+      <div className="flex flex-col items-center justify-center p-4 sm:ml-64">
+        <h1 className="text-3xl text-gray-900 font-semibold mb-8">
+          Media Recorder
+        </h1>
+        <AudioRecorder />
+      </div>
+    </HomeLayout>
   );
 };
 export default withAuth(Home);

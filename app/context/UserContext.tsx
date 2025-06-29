@@ -1,38 +1,41 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
+import { User } from "../login/page";
 
-type User = {
-  token: string;
+type UserData = {
+  user: User;
+  token: string | null;
 };
 
 type UserContextType = {
-  user: User | null;
-  setUser: (user: User | null) => void;
+  userData: UserData | null;
+  setUserData: (userData: UserData | null) => void;
   isAuthenticated: boolean;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
+    const token = localStorage.getItem("token");
 
-    if (storedUser) {
+    if (storedUser && token) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
+        setUserData({ user: parsedUser, token });
       } catch (error) {
-        setUser(null);
+        setUserData(null);
       }
     }
   }, []);
 
-  const isAuthenticated = !!user?.token;
+  const isAuthenticated = !!userData?.token;
 
   return (
-    <UserContext.Provider value={{ user, setUser, isAuthenticated }}>
+    <UserContext.Provider value={{ userData, setUserData, isAuthenticated }}>
       {children}
     </UserContext.Provider>
   );
@@ -40,7 +43,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
 export const useUser = () => {
   const context = useContext(UserContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useUser must be used within a UserProvider");
   }
   return context;

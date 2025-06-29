@@ -67,14 +67,9 @@ const Login = () => {
     setLoadingSubmit(true);
     const response = await loginUserApiHandler(newEmail, newPassword);
     if (response.success) {
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          user: response.user,
-          token: response.token,
-        })
-      );
       localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+
       router.push("/");
       onCloseEmptyStates();
     } else {

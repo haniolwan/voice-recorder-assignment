@@ -13,7 +13,7 @@ const withAuth = <P extends WithAuthProps>(
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [authenticated, setAuthenticated] = useState(false);
-    const { setUser } = useUser();
+    const { setUserData } = useUser();
 
     useEffect(() => {
       const checkAuth = async () => {
@@ -38,7 +38,7 @@ const withAuth = <P extends WithAuthProps>(
             return;
           }
 
-          setUser(parsedUser);
+          setUserData(parsedUser);
           setAuthenticated(true);
         } catch (err) {
           localStorage.removeItem("user");
@@ -49,7 +49,7 @@ const withAuth = <P extends WithAuthProps>(
       };
 
       checkAuth();
-    }, [router, setUser]);
+    }, [router, setUserData]);
 
     if (loading) {
       return null; // todo add loading
