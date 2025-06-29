@@ -1,4 +1,5 @@
 "use client";
+import { useRecords } from "@/app/context/RecordersContext";
 import { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
@@ -30,6 +31,8 @@ const AudioRecorder = () => {
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
 
+  const { setRecordings } = useRecords();
+
   const startRecording = async () => {
     if (!stream) {
       alert("No audio stream available. Please allow microphone access.");
@@ -45,6 +48,8 @@ const AudioRecorder = () => {
     const localAudioChunks: Blob[] = [];
 
     const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user") ?? "");
+
     const uuid = uuidv4();
 
     mediaRecorder.current.ondataavailable = async event => {
@@ -57,7 +62,7 @@ const AudioRecorder = () => {
       reader.onloadend = async () => {
         const base64Audio = reader.result as string;
 
-        await fetch("/api/audio-chunk", {
+        const response = await fetch("/api/audio-chunk", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -72,6 +77,35 @@ const AudioRecorder = () => {
 
       reader.readAsDataURL(event.data);
     };
+
+    setRecordings((prev: any) => {
+      const existingIndex = prev.findIndex((rc: any) => rc.id === uuid);
+
+      if (existingIndex === -1) {
+        const newRecord = {
+          id: uuid,
+          userId: user.id,
+          audioData: [audio],
+          title: "Untitled",
+          duration: 0,
+          type: "audio",
+          createdAt: new Date().toISOString(),
+        };
+        return [...prev, newRecord];
+      } else {
+        const updated = [...prev];
+        const recordToUpdate = { ...updated[existingIndex] };
+
+        if (!Array.isArray(recordToUpdate.audioData)) {
+          recordToUpdate.audioData = [];
+        }
+
+        recordToUpdate.audioData = [...recordToUpdate.audioData, audio];
+        updated[existingIndex] = recordToUpdate;
+
+        return updated;
+      }
+    });
   };
 
   const stopRecording = () => {

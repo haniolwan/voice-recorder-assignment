@@ -1,3 +1,5 @@
+"use client";
+import withAuth from "../components/AuthorizeUser/withAuth";
 import HomeLayout from "../components/HomeLayout";
 import RecordingsList from "../components/RecordingsList";
 
@@ -13,4 +15,4 @@ const Recordings = () => {
     </HomeLayout>
   );
 };
-export default Recordings;
+export default withAuth(Recordings);

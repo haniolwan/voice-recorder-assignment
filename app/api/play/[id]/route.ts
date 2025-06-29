@@ -58,7 +58,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error in GET /recordings:", error);
     return new Response(
       JSON.stringify({
         success: false,

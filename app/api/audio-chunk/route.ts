@@ -1,4 +1,3 @@
-import { usersData } from "@/app/lib/users";
 import { validateToken } from "../auth/helpers";
 import { recordingsData } from "@/app/lib/recordings";
 
@@ -42,6 +41,7 @@ export async function POST(req: Request) {
     return Response.json({
       success: true,
       message: "Audio has been saved",
+      newRecording: recordingsData,
     });
   } catch (err: any) {
     return Response.json(
