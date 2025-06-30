@@ -20,20 +20,14 @@ const RecordingsList = () => {
   }
 
   const playRecording = async (id: string | number) => {
-    const token = localStorage.getItem("token");
-
     const response = await fetch(`/api/play/${id}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
-      body: JSON.stringify(recordings.find(rc => rc.id === id) || null),
+      body: JSON.stringify(id),
     });
-
-    if (!response.ok) {
-      return null;
-    }
 
     const audioBlob = await response.blob();
     return audioBlob;

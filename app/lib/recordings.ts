@@ -4,7 +4,7 @@ export type Record = {
   id: string;
   title: string;
   userId: User["id"];
-  audioData: any;
+  audioData: Blob[];
   duration: number;
   type: string;
   createdAt: string;

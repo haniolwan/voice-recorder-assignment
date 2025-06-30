@@ -29,7 +29,7 @@ const Content = () => {
         {getSidebarItems &&
           getSidebarItems?.map(({ id, label, path }) => (
             <li key={id}>
-              <Link
+              <a
                 href={path}
                 className={classNames(
                   "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group",
@@ -39,7 +39,7 @@ const Content = () => {
                 )}
               >
                 <span className="ms-3">{label}</span>
-              </Link>
+              </a>
             </li>
           ))}
         <li>

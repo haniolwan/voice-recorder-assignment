@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
+import { recordingsData } from "@/app/lib/recordings";
+import { withAuth } from "@/app/handler/withAuth";
 
-export async function POST(
+async function playRecordHandler(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -38,7 +40,7 @@ export async function POST(
       );
     }
 
-    const audioBuffers = record.audioData.map((base64Str: string) => {
+    const audioBuffers = record.audioData.map(base64Str => {
       const base64 = base64Str.split(",")[1];
       return Buffer.from(base64, "base64");
     });
@@ -63,3 +65,5 @@ export async function POST(
     );
   }
 }
+
+export const POST = withAuth(playRecordHandler);

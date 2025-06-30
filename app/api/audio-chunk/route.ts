@@ -1,20 +1,10 @@
+import { withAuth } from "@/app/handler/withAuth";
 import { validateToken } from "../auth/helpers";
 import { recordingsData } from "@/app/lib/recordings";
 
-export async function POST(req: Request) {
-  const authHeader = req.headers.get("authorization");
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return Response.json(
-      { success: false, message: "Auth header not available" },
-      { status: 400 }
-    );
-  }
-
-  const token = authHeader.split(" ")[1];
-
+async function audioChunkHandler(req: Request & { user: any }) {
   try {
-    const { user } = validateToken(token);
+    const { user } = req;
 
     const { audio, uniqueId } = await req.json();
 
@@ -52,3 +42,5 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export const POST = withAuth(audioChunkHandler);

@@ -1,171 +1,257 @@
 "use client";
-import { useRecords } from "@/app/context/RecordersContext";
-import { Record } from "@/app/lib/recordings";
-import { useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import { MutableRefObject, useEffect, useRef, useState } from "react";
+import RecordingInfo from "./Stats";
 
 const AudioRecorder = () => {
-  const [permission, setPermission] = useState<boolean>(false);
-  const [stream, setStream] = useState<MediaStream>();
+  const [permission, setPermission] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const [recordingStatus, setRecordingStatus] = useState("inactive");
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [audio, setAudio] = useState<string[]>([]);
-  const [audioId, setAudioId] = useState<string>();
+  const [audioId, setAudioId] = useState("");
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [audioSize, setAudioSize] = useState(0);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const mediaRecorder = useRef<MediaRecorder>(null);
+  const timerRef = useRef<any>(null);
   const mimeType = "audio/webm";
 
-  const getMicrophonePermission = async () => {
-    if ("MediaRecorder" in window) {
-      try {
-        const streamData = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: false,
-        });
+  const uuidv4 = () => Math.random().toString(36).substring(2, 15);
+  const token = "mock-token";
 
-        setPermission(true);
-        setStream(streamData);
-      } catch (error: any) {
-        alert(error.message);
-      }
+  useEffect(() => {
+    if (recordingStatus === "recording") {
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
     } else {
-      alert("The MediaRecorder API is not supported in your browser.");
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     }
-  };
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [recordingStatus]);
 
   const startRecording = async () => {
-    if (!stream) {
-      alert("No audio stream available. Please allow microphone access.");
-      return;
-    }
+    try {
+      setErrorMessage("");
 
-    setRecordingStatus("recording");
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setErrorMessage("Recording not supported in this browser");
+        return;
+      }
 
-    const media = new MediaRecorder(stream, { mimeType });
-    mediaRecorder.current = media;
-    mediaRecorder.current.start(1000);
+      const streamData: any = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
 
-    const localAudioChunks: Blob[] = [];
+      setPermission(true);
+      setStream(streamData);
+      setRecordingStatus("recording");
+      setRecordingTime(0);
+      setAudioSize(0);
 
-    const uuid = uuidv4();
-    setAudioId(uuid);
+      const media = new MediaRecorder(streamData, { mimeType });
+      mediaRecorder.current = media;
+      mediaRecorder.current.start(1000);
 
-    mediaRecorder.current.ondataavailable = async event => {
-      if (!event.data || event.data.size === 0) return;
+      const localAudioChunks: Blob[] = [];
+      const uuid = uuidv4();
+      setAudioId(uuid);
 
-      localAudioChunks.push(event.data);
-      setAudioChunks([...localAudioChunks]);
+      mediaRecorder.current.ondataavailable = async (event: any) => {
+        if (!event.data || event.data.size === 0) return;
 
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Audio = reader.result as string;
+        localAudioChunks.push(event.data);
+        setAudioChunks([...localAudioChunks]);
 
-        await fetch("/api/audio-chunk", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            audio: base64Audio,
-            uniqueId: uuid,
-          }),
-        });
+        const totalSize = localAudioChunks.reduce(
+          (sum, chunk) => sum + chunk.size,
+          0
+        );
+        setAudioSize(totalSize);
+
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64Audio = reader.result;
+          await fetch("/api/audio-chunk", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            body: JSON.stringify({
+              audio: base64Audio,
+              uniqueId: uuid,
+            }),
+          });
+        };
+        reader.readAsDataURL(event.data);
       };
-
-      reader.readAsDataURL(event.data);
-    };
+    } catch (error) {
+      setErrorMessage("check microphone permissions?.");
+      console.error("Recording error:", error);
+    }
   };
 
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const pauseRecording = () => {
+    if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
+      mediaRecorder.current.pause();
+      setRecordingStatus("paused");
+    }
+  };
 
-  const { recordings, setRecordings } = useRecords();
-  const token = localStorage.getItem("token");
+  const resumeRecording = () => {
+    if (mediaRecorder.current && mediaRecorder.current.state === "paused") {
+      mediaRecorder.current.resume();
+      setRecordingStatus("recording");
+    }
+  };
 
   const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.current) {
-      setRecordingStatus("inactive");
+    if (mediaRecorder.current && mediaRecorder.current.state !== "inactive") {
+      setRecordingStatus("processing");
       mediaRecorder.current.stop();
+
       mediaRecorder.current.onstop = async () => {
         const response = await fetch("/api/save-final-recording", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
           body: JSON.stringify({ uniqueId: audioId }),
         });
 
-        const { success, newRecording } = await response.json();
-
-        if (success) {
-          setRecordings((prev: Record[]) => [
-            ...prev,
-            { ...newRecording, audioData: audioChunks },
-          ]);
-        }
         const audioBlob = new Blob(audioChunks, { type: mimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
-        setAudio(prev => [...(prev || []), audioUrl]);
+        setAudio((prev: any) => [...prev, audioUrl]);
+
         setAudioChunks([]);
+        setRecordingStatus("inactive");
+        setRecordingTime(0);
+        setAudioSize(0);
+
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          setStream(null);
+        }
       };
     }
   };
 
-  useEffect(() => {
-    const streamData = async () => {
-      if (!stream) return;
-      const media = new MediaRecorder(stream);
-
-      mediaRecorder.current = media;
-      mediaRecorder.current.start(1000);
-
-      mediaRecorder.current.ondataavailable = async (event: any) => {
-        if (typeof event.data === "undefined") return;
-        if (event.data.size === 0) return;
-      };
-    };
-    streamData();
-  }, [stream]);
+  const getStatusColor = () => {
+    switch (recordingStatus) {
+      case "recording":
+        return "text-red-500";
+      case "paused":
+        return "text-yellow-500";
+      case "processing":
+        return "text-blue-500";
+      default:
+        return "text-gray-500";
+    }
+  };
 
   return (
-    <div>
-      <main>
-        <div className="relative">
-          {!permission ? (
-            <button
-              className="flex items-center justify-center font-semibold w-full h-[44px] px-[18px] py-[10px] gap-2 rounded-sm mb-6 text-white bg-gray-700 hover:bg-gray-800 focus:bg-gray-800"
-              onClick={getMicrophonePermission}
-              type="button"
-            >
-              Get Microphone
-            </button>
-          ) : null}
-          {permission && recordingStatus === "inactive" ? (
-            <button
-              className="flex items-center justify-center font-semibold w-full h-[44px] px-[18px] py-[10px] gap-2 rounded-sm mb-6 text-white bg-gray-700 hover:bg-gray-800 focus:bg-gray-800"
-              onClick={startRecording}
-              type="button"
-            >
-              Start Recording
-            </button>
-          ) : null}
-          {recordingStatus === "recording" ? (
-            <div className="flex items-center space-x-4">
-              <button
-                className="flex items-center justify-center font-semibold w-full h-[44px] px-[18px] py-[10px] gap-2 rounded-sm mb-6 text-white bg-gray-700 hover:bg-gray-800 focus:bg-gray-800"
-                onClick={stopRecording}
-                type="button"
-              >
-                Stop Recording
-              </button>
-              <span className="text-gray-900 font-bold"></span>
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800">
+            Audio Recorder
+          </h2>
+
+          {errorMessage && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
+              {errorMessage}
             </div>
-          ) : null}
+          )}
+
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between">
+              {recordingStatus !== "inactive" && (
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-1"></div>
+                  <div className="flex items-center gap-1"></div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-4 mb-6">
+            <button
+              onClick={
+                recordingStatus === "paused" ? resumeRecording : startRecording
+              }
+              disabled={
+                recordingStatus === "recording" ||
+                recordingStatus === "processing"
+              }
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+            >
+              {recordingStatus === "paused" ? "Resume" : "Start"}
+            </button>
+
+            <button
+              onClick={pauseRecording}
+              disabled={recordingStatus !== "recording"}
+              className="flex items-center gap-2 px-6 py-3 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+            >
+              Pause
+            </button>
+
+            <button
+              onClick={stopRecording}
+              disabled={
+                recordingStatus === "inactive" ||
+                recordingStatus === "processing"
+              }
+              className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+            >
+              Stop
+            </button>
+          </div>
+
+          {audio.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3 text-gray-800">
+                Recordings
+              </h3>
+              <div className="space-y-3">
+                {audio.map((src, index) => (
+                  <div key={src} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Recording {index + 1}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date().toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <audio src={src} controls className="w-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <div className="space-y-4">
-          {audio &&
-            audio.map(src => <audio key={src} src={src} controls></audio>)}
-        </div>
-      </main>
+        <RecordingInfo
+          recordingTime={recordingTime}
+          audioSize={audioSize}
+          audioChunks={audioChunks}
+          audio={audio}
+          permission={permission}
+        />
+      </div>
     </div>
   );
 };
+
 export default AudioRecorder;
