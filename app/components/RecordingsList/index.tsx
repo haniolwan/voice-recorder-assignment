@@ -7,18 +7,6 @@ const RecordingsList = () => {
   const { recordings } = useRecords();
   const [playingId, setPlayingId] = useState<string | null>(null);
 
-  function base64ToBlob(base64Data: string): Blob {
-    const parts = base64Data.split(",");
-    const mimeType = parts[0].match(/:(.*?);/)?.[1];
-    const byteCharacters = atob(parts[1]);
-    const byteNumbers = new Array(byteCharacters.length)
-      .fill(0)
-      .map((_, i) => byteCharacters.charCodeAt(i));
-    const byteArray = new Uint8Array(byteNumbers);
-
-    return new Blob([byteArray], { type: mimeType || "audio/webm" });
-  }
-
   const playRecording = async (id: string | number) => {
     const response = await fetch(`/api/play/${id}`, {
       method: "POST",

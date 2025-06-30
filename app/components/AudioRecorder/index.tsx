@@ -1,5 +1,5 @@
 "use client";
-import { MutableRefObject, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RecordingInfo from "./Stats";
 
 const AudioRecorder = () => {
@@ -18,7 +18,6 @@ const AudioRecorder = () => {
   const mimeType = "audio/webm";
 
   const uuidv4 = () => Math.random().toString(36).substring(2, 15);
-  const token = "mock-token";
 
   useEffect(() => {
     if (recordingStatus === "recording") {
@@ -144,19 +143,6 @@ const AudioRecorder = () => {
           setStream(null);
         }
       };
-    }
-  };
-
-  const getStatusColor = () => {
-    switch (recordingStatus) {
-      case "recording":
-        return "text-red-500";
-      case "paused":
-        return "text-yellow-500";
-      case "processing":
-        return "text-blue-500";
-      default:
-        return "text-gray-500";
     }
   };
 

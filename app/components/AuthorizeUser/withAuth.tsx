@@ -52,7 +52,7 @@ const withAuth = <P extends WithAuthProps>(
     }, [router, setUserData]);
 
     if (loading) {
-      return null; // todo add loading
+      return null;
     }
 
     if (!authenticated) {
